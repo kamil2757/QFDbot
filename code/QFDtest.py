@@ -1,19 +1,51 @@
 import sqlite3
 import telebot
 from telebot import types
+import schedule
 import time
+from datetime import datetime
 import random
+import functools
 
-bot = telebot.TeleBot('6606153195:AAGJFy_W_ejzna2LzF_hKdAdyhW00ZeTL30')
-
+bot = telebot.TeleBot('7070138497:AAEBoWNnKOmyDHfEbdOejwyaz0Nq77HTjTM')
 @bot.message_handler(commands=['start'])
 def greeting(message):
+    def notify():
+        conn = sqlite3.connect('../data/QFDtest.db')
+        cur = conn.cursor()
+        cur.execute('''SELECT work FROM works WHERE id_user_tg = ? and time_m = 0 and date = CURRENT_DATE''',
+                    (message.from_user.id,))
+        db_info = cur.fetchall()
+
+        for i in range(len(db_info)):
+            max_num = 0
+            if i > max_num:
+                max_num = i
+
+        random_num = random.randint(0, max_num)
+
+        random_num2 = random.randint(1, 5)
+        if random_num2 == 1:
+            bot.send_message(message.chat.id, f'Не забудь сделать {db_info[random_num][0]}! >:0')
+        elif random_num2 == 2:
+            bot.send_message(message.chat.id, f'Тебе бы сделать {db_info[random_num][0]} :>')
+        elif random_num2 == 3:
+            bot.send_message(message.chat.id, f'Не забыл  {db_info[random_num][0]} сегодня поделать? :>>>>')
+        elif random_num2 == 4:
+            bot.send_message(message.chat.id, f'привеееет, а ты будш делать {db_info[random_num][0]} :>? ')
+        elif random_num2 == 5:
+            bot.send_message(message.chat.id, f'тебе бы {db_info[random_num][0]} поделать :)')
+
+    schedule.every().day.at("15:00").do(notify)
+    schedule.every().day.at("19:00").do(notify)
+
     markup = types.InlineKeyboardMarkup()
     button1 = types.InlineKeyboardButton('Продолжить', callback_data='menu')
     markup.row(button1)
-
-    conn = sqlite3.connect('QFD.db')
+    conn = sqlite3.connect('../data/QFDtest.db')
     cur = conn.cursor()
+
+
 
 
     cur.execute('''SELECT * FROM users WHERE id_tg = ?''', (message.from_user.id,))
@@ -33,6 +65,33 @@ def greeting(message):
 @bot.callback_query_handler(func=lambda call:True)
 def cal_fun(call):
     if call.data == 'menu':
+        def notify():
+            conn = sqlite3.connect('../data/QFDtest.db')
+            cur = conn.cursor()
+            cur.execute('''SELECT work FROM works WHERE id_user_tg = ? and time_m = 0 and date = CURRENT_DATE''', (call.from_user.id, ))
+            db_info = cur.fetchall()
+
+            max_num = 0
+            for i in range(len(db_info)):
+                if i > max_num:
+                    max_num = i
+
+            random_num = random.randint(0, max_num)
+
+            random_num2 = random.randint(1, 5)
+            if random_num2 == 1:
+                bot.send_message(call.message.chat.id, f'Не забудь сделать {db_info[random_num][0]}! >:0')
+            elif random_num2 == 2:
+                bot.send_message(call.message.chat.id, f'Тебе бы сделать {db_info[random_num][0]} :>')
+            elif random_num2 == 3:
+                bot.send_message(call.message.chat.id, f'Не забыл  {db_info[random_num][0]} сегодня поделать? :>>>>')
+            elif random_num2 == 4:
+                bot.send_message(call.message.chat.id, f'привеееет, а ты будш делать {db_info[random_num][0]} :>? ')
+            elif random_num2 == 5:
+                bot.send_message(call.message.chat.id, f'тебе бы {db_info[random_num][0]} поделать :)')
+
+
+
         markup = types.InlineKeyboardMarkup()
         button1 = types.InlineKeyboardButton('Дела', callback_data='tasks')
         button2 = types.InlineKeyboardButton('Профиль', callback_data='profile')
@@ -42,11 +101,11 @@ def cal_fun(call):
         markup.row(button2)
         markup.row(button3)
 
-        photo = open('меню.png', 'rb')
+        photo = open('../data/меню.png', 'rb')
         bot.send_photo(call.message.chat.id, photo, reply_markup=markup)
 
-        if random.randint(1, 4) == 1:
-            conn = sqlite3.connect('QFD.db')
+        if random.randint(1, 1) == 1:
+            conn = sqlite3.connect('../data/QFDtest.db')
             cur = conn.cursor()
             random_num = random.randint(1, 2)
             if random_num == 1:
@@ -63,13 +122,21 @@ def cal_fun(call):
             elif random_num == 2:
                 cur.execute('''SELECT date_regist FROM users WHERE id_tg = ?''', (call.from_user.id, ))
                 db_info1 = cur.fetchone()
-                cur.execute('''SELECT DATE('now') - ?''', (db_info1[0],))
+                cur.execute('''SELECT julianday('now') - julianday(?)''', (db_info1[0],))
                 db_info2 = cur.fetchone()
-                bot.send_message(call.message.chat.id, f'ты в нашем боте уже дней {db_info2[0]} :>')
+                days_difference = int(db_info2[0])
+                bot.send_message(call.message.chat.id, f'ты в нашем боте уже дней {days_difference} :>')
                 conn.close()
 
+
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+    elif call.data == 'delete_tasks':
+        bot.send_message(call.message.chat.id, 'Напиши дело, которое ты хочешь удалить (время удалится)')
+        bot.register_next_step_handler(call.message, delete_tasks2)
     elif call.data == 'take_past':
-        conn = sqlite3.connect('QFD.db')
+        conn = sqlite3.connect('../data/QFDtest.db')
 
         cur = conn.cursor()
         cur.execute('''SELECT work FROM works WHERE id_user_tg = ?''', (call.from_user.id, ))
@@ -96,15 +163,19 @@ def cal_fun(call):
             markup = types.InlineKeyboardMarkup()
             button1 = types.InlineKeyboardButton('Отметить', callback_data='mark_tasks')
             button2 = types.InlineKeyboardButton('Сбросить', callback_data='reset_tasks')
-            button3 = types.InlineKeyboardButton('Меню', callback_data='menu')
+            button3 = types.InlineKeyboardButton('Добавить', callback_data='create_tasks')
+            button4 = types.InlineKeyboardButton('Удалить', callback_data='delete_tasks')
+            button5 = types.InlineKeyboardButton('Меню', callback_data='menu')
             markup.row(button1, button2)
-            markup.row(button3)
+            markup.row(button3, button4)
+            markup.row(button5)
             bot.send_message(call.message.chat.id, str_tasks, reply_markup=markup)
             conn.close()
 
 
+
     elif call.data == 'tasks':
-        conn = sqlite3.connect('QFD.db')
+        conn = sqlite3.connect('../data/QFDtest.db')
         cur = conn.cursor()
         cur.execute('''SELECT work FROM works WHERE id_user_tg = ? AND date = CURRENT_DATE''', (call.from_user.id, ))
         db_info = cur.fetchall()
@@ -113,13 +184,12 @@ def cal_fun(call):
             markup = types.InlineKeyboardMarkup()
             button1 = types.InlineKeyboardButton('Составить', callback_data='create_tasks')
             button2 = types.InlineKeyboardButton('Взять прошлые', callback_data='take_past')
-            button3 = types.InlineKeyboardButton('меню', callback_data='menu')
-            markup.row(button1,button2)
-            markup.row(button3)
-            photo = open('дела.png', 'rb')
+            button3 = types.InlineKeyboardButton('Меню', callback_data='menu')
+            markup.row(button1, button2)
+            photo = open('../data/дела.png', 'rb')
             bot.send_photo(call.message.chat.id, photo, reply_markup=markup)
         else:
-            photo = open('дела.png', 'rb')
+            photo = open('../data/дела.png', 'rb')
             bot.send_photo(call.message.chat.id, photo)
             str_tasks = ''
             cur.execute('''SELECT work, time_m FROM works WHERE id_user_tg = ? AND date = CURRENT_DATE''',
@@ -157,9 +227,12 @@ def cal_fun(call):
             markup = types.InlineKeyboardMarkup()
             button1 = types.InlineKeyboardButton('Отметить', callback_data='mark_tasks')
             button2 = types.InlineKeyboardButton('Сбросить', callback_data='reset_tasks')
-            button3 = types.InlineKeyboardButton('Меню', callback_data='menu')
+            button3 = types.InlineKeyboardButton('Добавить', callback_data='create_tasks')
+            button4 = types.InlineKeyboardButton('Удалить', callback_data='delete_tasks')
+            button5 = types.InlineKeyboardButton('Меню', callback_data='menu')
             markup.row(button1, button2)
-            markup.row(button3)
+            markup.row(button3, button4)
+            markup.row(button5)
             bot.send_message(call.message.chat.id, str_tasks, reply_markup=markup)
             conn.close()
 
@@ -169,15 +242,15 @@ def cal_fun(call):
         bot.register_next_step_handler(call.message, mark_tasks2)
 
     elif call.data == 'create_tasks':
-        bot.send_message(call.message.chat.id, 'Напиши свои дела. Если ты закончил, напиши ready')
+        bot.send_message(call.message.chat.id, 'Напиши дела. Если ты закончил, напиши ready')
         bot.send_message(call.message.chat.id, 'в таком ввиде:')
-        photo = open('пример сообщение.png', 'rb')
+        photo = open('../data/пример сообщение.png', 'rb')
         bot.send_photo(call.message.chat.id, photo)
 
         bot.register_next_step_handler(call.message, create_tasks2)
 
     elif call.data == 'reset_tasks':
-        conn = sqlite3.connect('QFD.db')
+        conn = sqlite3.connect('data/QFDtest.db')
 
         cur = conn.cursor()
         cur.execute('''SELECT SUM(time_m) FROM works WHERE id_user_tg = ? AND date = CURRENT_DATE''', (call.from_user.id,))
@@ -213,26 +286,28 @@ def cal_fun(call):
 
 
     elif call.data == 'profile':
-        photo = open('дефолт ава.png', 'rb')
+        photo = open('../data/дефолт ава.png', 'rb')
         bot.send_photo(call.message.chat.id, photo)
 
         markup = types.InlineKeyboardMarkup()
         button = types.InlineKeyboardButton('меню', callback_data='menu')
         markup.add(button)
 
-        conn = sqlite3.connect('QFD.db')
+        conn = sqlite3.connect('../data/QFDtest.db')
         cur = conn.cursor()
 
         cur.execute('''SELECT sum_time,date_regist FROM users WHERE id_tg = ?''', (call.from_user.id,))
         bd_info = cur.fetchone()
         time_h = bd_info[0] // 60
         time_m = bd_info[0] % 60
-        cur.execute('''SELECT DATE('now') - ?''', (bd_info[1],))
+        cur.execute('''SELECT julianday('now') - julianday(?)''', (bd_info[1],))
         bd_info2 = cur.fetchone()
+        days_difference = int(bd_info2[0])
+
 
         if call.from_user.id == 1450823762:
             bot.send_message(call.message.chat.id,
-                             f'Самое красивое имя: {call.from_user.first_name}\nВы с нами уже дней: {bd_info2[0]}\n\nВсего времени: {time_h}ч {time_m}мин ',
+                             f'Самое красивое имя: {call.from_user.first_name}\nВы с нами уже дней: {(days_difference)}\n\nВсего времени: {time_h}ч {time_m}мин ',
                              reply_markup=markup)
             random_num = random.randint(1, 5)
             if random_num == 1:
@@ -261,14 +336,45 @@ def cal_fun(call):
 
         else:
             bot.send_message(call.message.chat.id,
-                             f'Ник: {call.from_user.first_name}\nВы с нами уже дней: {bd_info2[0]}\n\nВсего времени: {time_h}ч {time_m}мин ',
+                             f'Ник: {call.from_user.first_name}\nВы с нами уже дней: {(days_difference)}\n\nВсего времени: {time_h}ч {time_m}мин ',
                              reply_markup=markup)
             conn.close()
 
+def delete_tasks2(message):
+    conn = sqlite3.connect('../data/QFDtest.db')
+    cur = conn.cursor()
+
+    cur.execute('''SELECT work FROM works WHERE work = ? AND id_user_tg = ?''',
+                (message.text.title(), message.from_user.id))
+    db_info = cur.fetchone()
+
+    if db_info is None:
+        bot.send_message(message.chat.id, 'не существует такого дело, напиши заново')
+        bot.register_next_step_handler(message, mark_tasks2)
+    else:
+        cur.execute('''SELECT time_m FROM works WHERE work = ? AND id_user_tg = ?''',
+                (message.text.title(), message.from_user.id))
+        work_time = cur.fetchone()[0]
+
+        cur.execute('''DELETE FROM works WHERE work = ? AND id_user_tg = ?''',
+        (message.text.title(), message.from_user.id))
+        cur.execute(
+            '''
+               UPDATE users
+               SET sum_time = sum_time - ?
+               WHERE id_tg = ?
+            ''', (work_time, message.from_user.id))
+        conn.commit()
+        conn.close()
+
+        markup = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton('Продолжить', callback_data='tasks')
+        markup.row(button1)
+        bot.send_message(message.chat.id, 'Дело было удаленно', reply_markup=markup)
 
 
 def mark_tasks2(message):
-    conn = sqlite3.connect('QFD.db')
+    conn = sqlite3.connect('../data/QFDtest.db')
 
     cur = conn.cursor()
     cur.execute('''SELECT work FROM works WHERE work = ? AND id_user_tg = ?''',
@@ -285,7 +391,7 @@ def mark_tasks2(message):
 def mark_tasks3(message, work):
     work_minutes = message.text
     if message.text.isdigit():
-        conn = sqlite3.connect('QFD.db')
+        conn = sqlite3.connect('../data/QFDtest.db')
         if message.text.isdigit():
             cur = conn.cursor()
             cur.execute('''
@@ -329,9 +435,12 @@ def mark_tasks3(message, work):
             markup = types.InlineKeyboardMarkup()
             button1 = types.InlineKeyboardButton('Отметить', callback_data='mark_tasks')
             button2 = types.InlineKeyboardButton('Сбросить', callback_data='reset_tasks')
-            button3 = types.InlineKeyboardButton('Меню', callback_data='menu')
+            button3 = types.InlineKeyboardButton('Добавить', callback_data='create_tasks')
+            button4 = types.InlineKeyboardButton('Удалить', callback_data='delete_tasks')
+            button5 = types.InlineKeyboardButton('Меню', callback_data='menu')
             markup.row(button1, button2)
-            markup.row(button3)
+            markup.row(button3, button4)
+            markup.row(button5)
             bot.send_message(message.chat.id, str_tasks, reply_markup=markup)
 
             cur.execute('''UPDATE users SET sum_time = sum_time + ? WHERE id_tg = ?''',
@@ -351,7 +460,7 @@ def mark_tasks3(message, work):
 
 def create_tasks2(message):
     user_task = message.text.title()
-    conn = sqlite3.connect('QFD.db')
+    conn = sqlite3.connect('../data/QFDtest.db')
 
     cur = conn.cursor()
 
@@ -373,9 +482,12 @@ def create_tasks2(message):
         markup = types.InlineKeyboardMarkup()
         button1 = types.InlineKeyboardButton('Отметить', callback_data='mark_tasks')
         button2 = types.InlineKeyboardButton('Сбросить', callback_data='reset_tasks')
-        button3 = types.InlineKeyboardButton('Меню', callback_data='menu')
+        button3 = types.InlineKeyboardButton('Добавить', callback_data='create_tasks')
+        button4 = types.InlineKeyboardButton('Удалить', callback_data='delete_tasks')
+        button5 = types.InlineKeyboardButton('Меню', callback_data='menu')
         markup.row(button1, button2)
-        markup.row(button3)
+        markup.row(button3, button4)
+        markup.row(button5)
         bot.send_message(message.chat.id, str_tasks, reply_markup=markup)
         conn.close()
     else:
@@ -391,7 +503,7 @@ def create_tasks2(message):
 
 def create_tasks2(message):
     user_task = message.text.title()
-    conn = sqlite3.connect('QFD.db')
+    conn = sqlite3.connect('../data/QFDtest.db')
 
     cur = conn.cursor()
 
@@ -413,9 +525,12 @@ def create_tasks2(message):
         markup = types.InlineKeyboardMarkup()
         button1 = types.InlineKeyboardButton('Отметить', callback_data='mark_tasks')
         button2 = types.InlineKeyboardButton('Сбросить', callback_data='reset_tasks')
-        button3 = types.InlineKeyboardButton('Меню', callback_data='menu')
+        button3 = types.InlineKeyboardButton('Добавить', callback_data='create_tasks')
+        button4 = types.InlineKeyboardButton('Удалить', callback_data='delete_tasks')
+        button5 = types.InlineKeyboardButton('Меню', callback_data='menu')
         markup.row(button1, button2)
-        markup.row(button3)
+        markup.row(button3, button4)
+        markup.row(button5)
         bot.send_message(message.chat.id, str_tasks, reply_markup=markup)
         conn.close()
     else:
@@ -424,6 +539,7 @@ def create_tasks2(message):
         conn.commit()
         conn.close()
         bot.register_next_step_handler(message, create_tasks2)
+
 
 
 
